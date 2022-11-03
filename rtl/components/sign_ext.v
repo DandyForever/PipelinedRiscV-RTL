@@ -6,4 +6,3 @@ module sign_ext(
 assign imm32 = {{20{imm12[11]}}, imm12};
 
 endmodule
-

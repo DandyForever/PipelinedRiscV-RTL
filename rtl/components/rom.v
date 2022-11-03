@@ -23,4 +23,3 @@ always @(q)
   end
 
 endmodule
-
