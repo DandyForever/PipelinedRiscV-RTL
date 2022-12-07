@@ -51,8 +51,6 @@ always_comb begin
     7'b1100011: begin /* B-type */
       alu_alt  = ~funct3[2];
       alu_op   = {1'b0, funct3[2:1]};
-      imm12    = {instr[31], instr[31], instr[7],
-                  instr[30:25], instr[11:9]};
       branch   = 1'b1;
       check_eq = funct3[0] ^ ~funct3[2];
     end
