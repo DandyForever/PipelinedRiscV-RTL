@@ -1,4 +1,4 @@
-`default_nettype none
+`default_nettype wire
 
 module latch #(
   parameter DATA_W = 1

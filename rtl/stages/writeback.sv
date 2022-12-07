@@ -1,5 +1,7 @@
+`default_nettype wire
+
 module writeback_stage #(
-  parameter ADDR_W = 32,
+  parameter ADDR_W = 5,
   parameter DATA_W = 32
 )(
   input clk,
@@ -24,3 +26,4 @@ module writeback_stage #(
 
 endmodule
 
+`default_nettype wire

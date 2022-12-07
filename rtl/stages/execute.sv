@@ -1,8 +1,10 @@
+`default_nettype wire
+
 module execute_stage #(
   parameter ALU_OP_W = 3,
   parameter IMM_W    = 32,
   parameter DATA_W   = 32,
-  parameter ADDR_W   = 32,
+  parameter ADDR_W   = 5,
   parameter PC_W     = 32
 )(
   input clk,
@@ -41,7 +43,10 @@ module execute_stage #(
 
   wire [DATA_W-1:0]alu_result;
 
-  alu alu(
+  alu #(
+    .DATA_W  (DATA_W  ),
+    .ALU_OP_W(ALU_OP_W)
+  ) alu (
     .src_a(alu_src0  ),
     .src_b(alu_src1  ),
     .op   (alu_op_i  ),
@@ -61,3 +66,4 @@ module execute_stage #(
 
 endmodule
 
+`default_nettype wire

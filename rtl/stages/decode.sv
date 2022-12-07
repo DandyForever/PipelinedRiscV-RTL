@@ -1,7 +1,9 @@
+`default_nettype wire
+
 module decode_stage #(
   parameter PC_W       = 32,
   parameter INSTR_W    = 32,
-  parameter ADDR_W     = 32,
+  parameter ADDR_W     = 5,
   parameter DATA_W     = 32,
   parameter ALU_OP_W   = 3,
   parameter IMM_W      = 32
@@ -10,39 +12,39 @@ module decode_stage #(
   input reset,
 
 // from FE
-  input  [INSTR_W-1:0]instr_i,
-  input     [PC_W-1:0]pc_plus1_i,
+  input   [INSTR_W-1:0]instr_i,
+  input      [PC_W-1:0]pc_plus1_i,
 // from WB
-  input   [ADDR_W-1:0]rf_waddr_i,
-  input     [DATA_W:0]rf_wdata_i,
-  input               rf_we_i,
+  input    [ADDR_W-1:0]rf_waddr_i,
+  input    [DATA_W-1:0]rf_wdata_i,
+  input                rf_we_i,
 // to EXE
-  output                has_imm_o,
-  output  [ALU_OP_W-1:0]alu_op_o,
-  output                alu_alt_o,
-  output                rf_we_o,
-  output                mem_we_o,
-  output                mem2rf_o,
-  output                branch_o,
-  output                check_eq_o,
-  output     [IMM_W-1:0]imm32_o,
-  output    [DATA_W-1:0]rf_data0_o,
-  output    [DATA_W-1:0]rf_data1_o,
-  output    [ADDR_W-1:0]rf_waddr_o,
-  output      [PC_W-1:0]pc_plus1_o
+  output               has_imm_o,
+  output [ALU_OP_W-1:0]alu_op_o,
+  output               alu_alt_o,
+  output               rf_we_o,
+  output               mem_we_o,
+  output               mem2rf_o,
+  output               branch_o,
+  output               check_eq_o,
+  output    [IMM_W-1:0]imm32_o,
+  output   [DATA_W-1:0]rf_data0_o,
+  output   [DATA_W-1:0]rf_data1_o,
+  output   [ADDR_W-1:0]rf_waddr_o,
+  output     [PC_W-1:0]pc_plus1_o
 );
 
-  localparam REG_ADDR_W = 5;
+  // localparam REG_ADDR_W = 5;
   localparam IMM12_W    = 12;
   localparam F3_W       = 3;
   localparam F7_W       = 7;
   localparam OP_W       = 7;
 
-  wire       [OP_W-1:0]opcode = instr_i[6:0];
-  wire       [F3_W-1:0]funct3 = instr_i[14:12];
-  wire       [F7_W-1:0]funct7 = instr_i[31:25];
-  wire [REG_ADDR_W-1:0]r_src0 = instr_i[19:15];
-  wire [REG_ADDR_W-1:0]r_src1 = instr_i[24:20];
+  wire   [OP_W-1:0]opcode = instr_i[6:0];
+  wire   [F3_W-1:0]funct3 = instr_i[14:12];
+  wire   [F7_W-1:0]funct7 = instr_i[31:25];
+  wire [ADDR_W-1:0]r_src0 = instr_i[19:15];
+  wire [ADDR_W-1:0]r_src1 = instr_i[24:20];
 
   logic [IMM12_W-1:0]imm12_sw;
   logic [IMM12_W-1:0]imm12_branch;
@@ -68,7 +70,12 @@ module decode_stage #(
     imm12 = mem_we ? imm12_sw : branch ? imm12_branch : imm12_default;
   end
 
-  control_unit control_unit(
+  control_unit #(
+    .OP_W    (OP_W    ),
+    .F3_W    (F3_W    ),
+    .F7_W    (F7_W    ),
+    .ALU_OP_W(ALU_OP_W)
+  ) control_unit(
     .opcode  (opcode  ),
     .funct3  (funct3  ),
     .funct7  (funct7  ),
@@ -85,7 +92,10 @@ module decode_stage #(
   wire [DATA_W-1:0]rf_data0;
   wire [DATA_W-1:0]rf_data1;
 
-  reg_file register_file(
+  reg_file #(
+    .ADDR_W(ADDR_W),
+    .DATA_W(DATA_W)
+  ) register_file(
     .clk   (clk       ),
     .raddr0(r_src0    ),
     .raddr1(r_src1    ),
@@ -98,10 +108,7 @@ module decode_stage #(
 
   wire [IMM_W-1:0]imm32;
 
-  sign_ext sign_ext(
-    .imm12(imm12),
-    .imm32(imm32)
-  );
+  sign_ext sign_ext(.imm12(imm12), .imm32(imm32));
 
   latch                      has_imm_l (.clk(clk), .reset(reset), .data_i(has_imm   ), .data_o(has_imm_o ));
   latch #(.DATA_W(ALU_OP_W)) alu_op_l  (.clk(clk), .reset(reset), .data_i(alu_op    ), .data_o(alu_op_o  ));
@@ -119,3 +126,4 @@ module decode_stage #(
 
 endmodule
 
+`default_nettype wire

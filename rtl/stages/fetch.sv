@@ -1,3 +1,5 @@
+`default_nettype wire
+
 module fetch_stage #(
   parameter PC_W    = 32,
   parameter INSTR_W = 32
@@ -14,7 +16,7 @@ module fetch_stage #(
   output    [PC_W-1:0]pc_plus1_o
 );
 
-  reg  [PC_W-1:0]pc       = 32'hFFFFFFFF;
+  reg  [PC_W-1:0]pc       = {PC_W{1'b1}};
   wire [PC_W-1:0]pc_plus1 = pc + 1;
   wire [PC_W-1:0]pc_next  = pc_src_i ? pc_branch_i : pc_plus1;
 
@@ -25,9 +27,16 @@ module fetch_stage #(
     $strobe("F[%h]: %h", pc, instr);
   end
 
-  rom instr_memory(
+  localparam ADDR_W = 5;
+
+  wire [ADDR_W-1:0]addr = pc[ADDR_W-1:0];
+
+  rom #(
+    .ADDR_W (ADDR_W ),
+    .INSTR_W(INSTR_W)
+  ) instr_memory(
     .clk (clk  ),
-    .addr(pc   ),
+    .addr(addr ),
     .q   (instr)
   );
 
@@ -36,3 +45,4 @@ module fetch_stage #(
 
 endmodule
 
+`default_nettype wire
