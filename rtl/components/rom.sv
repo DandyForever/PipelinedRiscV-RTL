@@ -4,8 +4,6 @@ module rom #(
   parameter ADDR_W  = 5,
   parameter INSTR_W = 32
 )(
-  input clk,
-
   input   [ADDR_W - 1:0]addr,
   output [INSTR_W - 1:0]q
 );

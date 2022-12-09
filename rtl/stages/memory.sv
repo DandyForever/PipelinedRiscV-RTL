@@ -31,7 +31,7 @@ module memory_stage #(
 
   localparam MEM_ELEM_W = 8;
 
-  assign pc_src_o    = branch_i ? (check_eq_i ^ |alu_result_i) : 1'b0;
+  assign pc_src_o    = branch_i && (check_eq_i ^ |alu_result_i);
   assign pc_branch_o = pc_branch_i;
 
   wire [DATA_W-1:0]mem_rdata;
