@@ -8,4 +8,4 @@ Currently supported types of instructions
  * SW
  * LW
 
-![5-stage pipeline Risc-V](doc/pipeline_09_12_22.svg)
+![5-stage pipeline Risc-V](doc/pipeline_09_12_22.svg?raw=true)
