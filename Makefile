@@ -13,7 +13,8 @@ CONTROL  = $(COMP_DIR)/control.sv
 SIGN_EXT = $(COMP_DIR)/sign_ext.sv
 ROM      = $(COMP_DIR)/rom.sv
 RAM      = $(COMP_DIR)/ram.sv
-COMPS    = $(LATCH) + $(ALU) + $(REG_FILE) + $(CONTROL) + $(ROM) + $(RAM) + $(SIGN_EXT)
+HU       = $(COMP_DIR)/hazard_unit.sv
+COMPS    = $(LATCH) + $(ALU) + $(REG_FILE) + $(CONTROL) + $(ROM) + $(RAM) + $(SIGN_EXT) + $(HU)
 
 FETCH     = $(STAGE_DIR)/fetch.sv
 DECODE    = $(STAGE_DIR)/decode.sv

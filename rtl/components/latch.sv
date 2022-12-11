@@ -6,6 +6,9 @@ module latch #(
   input clk,
   input reset,
 
+  input en,
+  input clear,
+
   input  [DATA_W-1:0]data_i,
   output [DATA_W-1:0]data_o
 );
@@ -18,7 +21,7 @@ module latch #(
     if (reset) begin
       data_ff <= 0;
     end else begin
-      data_ff <= data_i;
+      data_ff <= clear ? 0 : en ? data_i : data_ff;
     end
   end
 

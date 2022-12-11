@@ -18,6 +18,9 @@ module decode_stage #(
   input    [ADDR_W-1:0]rf_waddr_i,
   input    [DATA_W-1:0]rf_wdata_i,
   input                rf_we_i,
+// from HU to support stall
+  input                latch_en_i,
+  input                latch_clear_i,
 // to EXE
   output               has_imm_o,
   output [ALU_OP_W-1:0]alu_op_o,
@@ -31,7 +34,14 @@ module decode_stage #(
   output   [DATA_W-1:0]rf_data0_o,
   output   [DATA_W-1:0]rf_data1_o,
   output   [ADDR_W-1:0]rf_waddr_o,
-  output     [PC_W-1:0]pc_plus1_o
+  output     [PC_W-1:0]pc_plus1_o,
+// to EXE to support bypass
+  output   [ADDR_W-1:0]rf_src0_o,
+  output   [ADDR_W-1:0]rf_src1_o,
+// to HU to support stall
+  output   [ADDR_W-1:0]rf_src0_hu_o,
+  output   [ADDR_W-1:0]rf_src1_hu_o,
+  output               has_imm_hu_o
 );
 
   // localparam REG_ADDR_W = 5;
@@ -110,19 +120,25 @@ module decode_stage #(
 
   sign_ext sign_ext(.imm12(imm12), .imm32(imm32));
 
-  latch                      has_imm_l (.clk(clk), .reset(reset), .data_i(has_imm   ), .data_o(has_imm_o ));
-  latch #(.DATA_W(ALU_OP_W)) alu_op_l  (.clk(clk), .reset(reset), .data_i(alu_op    ), .data_o(alu_op_o  ));
-  latch                      alu_alt_l (.clk(clk), .reset(reset), .data_i(alu_alt   ), .data_o(alu_alt_o ));
-  latch                      rf_we_l   (.clk(clk), .reset(reset), .data_i(rf_we     ), .data_o(rf_we_o   ));
-  latch                      mem_we_l  (.clk(clk), .reset(reset), .data_i(mem_we    ), .data_o(mem_we_o  ));
-  latch                      mem2rf_l  (.clk(clk), .reset(reset), .data_i(mem2rf    ), .data_o(mem2rf_o  ));
-  latch                      branch_l  (.clk(clk), .reset(reset), .data_i(branch    ), .data_o(branch_o  ));
-  latch                      check_eq_l(.clk(clk), .reset(reset), .data_i(check_eq  ), .data_o(check_eq_o));
-  latch #(.DATA_W(IMM_W))    imm32_l   (.clk(clk), .reset(reset), .data_i(imm32     ), .data_o(imm32_o   ));
-  latch #(.DATA_W(DATA_W))   rf_data0_l(.clk(clk), .reset(reset), .data_i(rf_data0  ), .data_o(rf_data0_o));
-  latch #(.DATA_W(DATA_W))   rf_data1_l(.clk(clk), .reset(reset), .data_i(rf_data1  ), .data_o(rf_data1_o));
-  latch #(.DATA_W(ADDR_W))   rf_waddr_l(.clk(clk), .reset(reset), .data_i(rf_waddr  ), .data_o(rf_waddr_o));
-  latch #(.DATA_W(PC_W))     pc_plus1_l(.clk(clk), .reset(reset), .data_i(pc_plus1_i), .data_o(pc_plus1_o));
+  latch                      has_imm_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(has_imm   ), .data_o(has_imm_o ));
+  latch #(.DATA_W(ALU_OP_W)) alu_op_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(alu_op    ), .data_o(alu_op_o  ));
+  latch                      alu_alt_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(alu_alt   ), .data_o(alu_alt_o ));
+  latch                      rf_we_l   (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_we     ), .data_o(rf_we_o   ));
+  latch                      mem_we_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(mem_we    ), .data_o(mem_we_o  ));
+  latch                      mem2rf_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(mem2rf    ), .data_o(mem2rf_o  ));
+  latch                      branch_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(branch    ), .data_o(branch_o  ));
+  latch                      check_eq_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(check_eq  ), .data_o(check_eq_o));
+  latch #(.DATA_W(IMM_W))    imm32_l   (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(imm32     ), .data_o(imm32_o   ));
+  latch #(.DATA_W(DATA_W))   rf_data0_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_data0  ), .data_o(rf_data0_o));
+  latch #(.DATA_W(DATA_W))   rf_data1_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_data1  ), .data_o(rf_data1_o));
+  latch #(.DATA_W(ADDR_W))   rf_waddr_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_waddr  ), .data_o(rf_waddr_o));
+  latch #(.DATA_W(PC_W))     pc_plus1_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(pc_plus1_i), .data_o(pc_plus1_o));
+  latch #(.DATA_W(ADDR_W))   rf_src0_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(r_src0    ), .data_o(rf_src0_o ));
+  latch #(.DATA_W(ADDR_W))   rf_src1_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(r_src1    ), .data_o(rf_src1_o ));
+
+  assign rf_src0_hu_o = r_src0;
+  assign rf_src1_hu_o = r_src1;
+  assign has_imm_hu_o = has_imm;
 
 endmodule
 

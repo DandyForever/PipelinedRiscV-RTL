@@ -10,7 +10,9 @@ module fetch_stage #(
 // from ME
   input               pc_src_i,
   input     [PC_W-1:0]pc_branch_i,
-
+//from HU to support stall
+  input               latch_en_i,
+  input               latch_clear_i,
 // to DE
   output [INSTR_W-1:0]instr_o,
   output    [PC_W-1:0]pc_plus1_o
@@ -23,7 +25,7 @@ module fetch_stage #(
   wire [INSTR_W-1:0]instr;
 
   always @(posedge clk) begin
-    pc <= pc_next;
+    pc <= latch_en_i ? pc_next : pc;
     $strobe("F[%h]: %h", pc, instr);
   end
 
@@ -35,13 +37,12 @@ module fetch_stage #(
     .ADDR_W (ADDR_W ),
     .INSTR_W(INSTR_W)
   ) instr_memory(
-    .clk (clk  ),
     .addr(addr ),
     .q   (instr)
   );
 
-  latch #(.DATA_W(INSTR_W)) instr_l (.clk(clk), .reset(reset), .data_i(instr), .data_o(instr_o   ));
-  latch #(.DATA_W(INSTR_W)) pc_l    (.clk(clk), .reset(reset), .data_i(pc   ), .data_o(pc_plus1_o));
+  latch #(.DATA_W(INSTR_W)) instr_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(instr), .data_o(instr_o   ));
+  latch #(.DATA_W(INSTR_W)) pc_l    (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(pc   ), .data_o(pc_plus1_o));
 
 endmodule
 
