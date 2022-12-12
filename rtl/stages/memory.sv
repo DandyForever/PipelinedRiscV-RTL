@@ -14,13 +14,14 @@ module memory_stage #(
   input              mem2rf_i,
   input              branch_i,
   input              check_eq_i,
+  input              jump_i,
   input  [DATA_W-1:0]mem_wdata_i,
   input  [ADDR_W-1:0]rf_waddr_i,
   input  [DATA_W-1:0]alu_result_i,
   input    [PC_W-1:0]pc_branch_i,
 // latch config
-  input latch_en,
-  input latch_clear,
+  input latch_en_i,
+  input latch_clear_i,
 // to WB
   output             rf_we_o,
   output [ADDR_W-1:0]rf_waddr_o,
@@ -34,12 +35,14 @@ module memory_stage #(
   output [DATA_W-1:0]rf_data_o,
 // to HU to support bypass
   output [ADDR_W-1:0]rf_dst_o,
-  output             rf_we_hu_o
+  output             rf_we_hu_o,
+// to HU to support branch prediction
+  output             pc_src_hu_o
 );
 
   localparam MEM_ELEM_W = 8;
 
-  assign pc_src_o    = branch_i && (check_eq_i ^ |alu_result_i);
+  assign pc_src_o    = jump_i || branch_i && (check_eq_i ^ |alu_result_i);
   assign pc_branch_o = pc_branch_i;
 
   wire [DATA_W-1:0]mem_rdata;
@@ -57,15 +60,16 @@ module memory_stage #(
     .r_data(mem_rdata   )
   );
 
-  latch                    rf_we_l     (.clk(clk), .reset(reset), .en(latch_en), .clear(latch_clear), .data_i(rf_we_i      ), .data_o(rf_we_o     ));
-  latch #(.DATA_W(ADDR_W)) rf_waddr_l  (.clk(clk), .reset(reset), .en(latch_en), .clear(latch_clear), .data_i(rf_waddr_i   ), .data_o(rf_waddr_o  ));
-  latch                    mem2rf_l    (.clk(clk), .reset(reset), .en(latch_en), .clear(latch_clear), .data_i(mem2rf_i     ), .data_o(mem2rf_o    ));
-  latch #(.DATA_W(DATA_W)) mem_rdata_l (.clk(clk), .reset(reset), .en(latch_en), .clear(latch_clear), .data_i(mem_rdata    ), .data_o(mem_rdata_o ));
-  latch #(.DATA_W(DATA_W)) alu_result_l(.clk(clk), .reset(reset), .en(latch_en), .clear(latch_clear), .data_i(alu_result_i ), .data_o(alu_result_o));
+  latch                    rf_we_l     (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_we_i      ), .data_o(rf_we_o     ));
+  latch #(.DATA_W(ADDR_W)) rf_waddr_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_waddr_i   ), .data_o(rf_waddr_o  ));
+  latch                    mem2rf_l    (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(mem2rf_i     ), .data_o(mem2rf_o    ));
+  latch #(.DATA_W(DATA_W)) mem_rdata_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(mem_rdata    ), .data_o(mem_rdata_o ));
+  latch #(.DATA_W(DATA_W)) alu_result_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(alu_result_i ), .data_o(alu_result_o));
 
-  assign rf_data_o  = alu_result_i;
-  assign rf_dst_o   = rf_waddr_i;
-  assign rf_we_hu_o = rf_we_i;
+  assign rf_data_o   = alu_result_i;
+  assign rf_dst_o    = rf_waddr_i;
+  assign rf_we_hu_o  = rf_we_i;
+  assign pc_src_hu_o = pc_src_o;
 
 endmodule
 

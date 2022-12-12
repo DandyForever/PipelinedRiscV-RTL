@@ -13,305 +13,226 @@ module cpu #(
   input reset
 );
 
-wire [ADDR_W-1:0]hu_rf_src0_i;
-wire [ADDR_W-1:0]hu_rf_src1_i;
-wire [ADDR_W-1:0]hu_rf_dst_m_i;
-wire [ADDR_W-1:0]hu_rf_dst_w_i;
-wire             hu_rf_we_m_i;
-wire             hu_rf_we_w_i;
-wire [ALU_SRC_SEL_W-1:0]hu_alu_src0_sel_o;
-wire [ALU_SRC_SEL_W-1:0]hu_alu_src1_sel_o;
+  wire        [ADDR_W-1:0]e_rf_src0_hu;
+  wire        [ADDR_W-1:0]e_rf_src1_hu;
+  wire        [ADDR_W-1:0]m_rf_dst_hu;
+  wire        [ADDR_W-1:0]w_rf_dst_hu;
+  wire                    m_rf_we_hu;
+  wire                    w_rf_we_hu;
+  wire [ALU_SRC_SEL_W-1:0]hu_alu_src0_sel_e;
+  wire [ALU_SRC_SEL_W-1:0]hu_alu_src1_sel_e;
 
-wire [ADDR_W-1:0]hu_rf_src0_d_i;
-wire [ADDR_W-1:0]hu_rf_src1_d_i;
-wire             hu_has_imm_d_i;
-wire [ADDR_W-1:0]hu_rf_dst_e_i;
-wire             hu_mem2rf_e_i;
-wire             hu_latch_en_f_o;
-wire             hu_latch_clear_d_o;
+  wire [ADDR_W-1:0]d_rf_src0_hu;
+  wire [ADDR_W-1:0]d_rf_src1_hu;
+  wire             d_has_imm_hu;
+  wire [ADDR_W-1:0]e_rf_dst_hu;
+  wire             e_mem2rf_hu;
+  wire             hu_latch_en_f;
+  wire             hu_latch_clear_d;
 
-hazard_unit hu(
-  .rf_src0_i      (hu_rf_src0_i      ),
-  .rf_src1_i      (hu_rf_src1_i      ),
-  .rf_dst_m_i     (hu_rf_dst_m_i     ),
-  .rf_dst_w_i     (hu_rf_dst_w_i     ),
-  .rf_we_m_i      (hu_rf_we_m_i      ),
-  .rf_we_w_i      (hu_rf_we_w_i      ),
-  .alu_src0_sel_o (hu_alu_src0_sel_o ),
-  .alu_src1_sel_o (hu_alu_src1_sel_o ),
-  .rf_src0_d_i    (hu_rf_src0_d_i    ),
-  .rf_src1_d_i    (hu_rf_src1_d_i    ),
-  .has_imm_d_i    (hu_has_imm_d_i    ),
-  .rf_dst_e_i     (hu_rf_dst_e_i     ),
-  .mem2rf_e_i     (hu_mem2rf_e_i     ),
-  .latch_en_f_o   (hu_latch_en_f_o   ),
-  .latch_clear_d_o(hu_latch_clear_d_o)
-);
+  wire m_pc_src_hu;
+  wire hu_latch_clear_f;
+  wire hu_latch_clear_e;
 
-wire              pc_src_f_i;
-wire    [PC_W-1:0]pc_branch_f_i;
-wire              latch_en_f_i;
-wire              latch_clear_f_i;
-wire [INSTR_W-1:0]instr_f_o;
-wire    [PC_W-1:0]pc_plus1_f_o;
-
-assign latch_en_f_i    = hu_latch_en_f_o;
-assign latch_clear_f_i = 1'b0;
-
-fetch_stage fetch(
-  .clk          (clk            ),
-  .reset        (reset          ),
-  .pc_src_i     (pc_src_f_i     ),
-  .pc_branch_i  (pc_branch_f_i  ),
-  .latch_en_i   (latch_en_f_i   ),
-  .latch_clear_i(latch_clear_f_i),
-  .instr_o      (instr_f_o      ),
-  .pc_plus1_o   (pc_plus1_f_o   )
-);
-
-wire [INSTR_W-1:0]instr_d_i    = instr_f_o;
-wire    [PC_W-1:0]pc_plus1_d_i = pc_plus1_f_o;
-
-logic [ADDR_W-1:0]rf_waddr_d_i;
-logic [DATA_W-1:0]rf_wdata_d_i;
-logic             rf_we_d_i;
-
-wire                has_imm_d_o;
-wire  [ALU_OP_W-1:0]alu_op_d_o;
-wire                alu_alt_d_o;
-wire                rf_we_d_o;
-wire                mem_we_d_o;
-wire                mem2rf_d_o;
-wire                branch_d_o;
-wire                check_eq_d_o;
-wire     [IMM_W-1:0]imm32_d_o;
-wire    [DATA_W-1:0]rf_data0_d_o;
-wire    [DATA_W-1:0]rf_data1_d_o;
-wire    [ADDR_W-1:0]rf_waddr_d_o;
-wire      [PC_W-1:0]pc_plus1_d_o;
-wire    [ADDR_W-1:0]rf_src0_d_o;
-wire    [ADDR_W-1:0]rf_src1_d_o;
-wire latch_en_d_i    = 1'b1;
-wire latch_clear_d_i = hu_latch_clear_d_o;
-wire [ADDR_W-1:0]rf_src0_hu_d_o;
-wire [ADDR_W-1:0]rf_src1_hu_d_o;
-wire             has_imm_hu_d_o;
-
-assign hu_rf_src0_d_i = rf_src0_hu_d_o;
-assign hu_rf_src1_d_i = rf_src1_hu_d_o;
-assign hu_has_imm_d_i = has_imm_hu_d_o;
-
-decode_stage decode(
-  .clk          (clk            ),
-  .reset        (reset          ),
-  .instr_i      (instr_d_i      ),
-  .pc_plus1_i   (pc_plus1_d_i   ),
-  .rf_waddr_i   (rf_waddr_d_i   ),
-  .rf_wdata_i   (rf_wdata_d_i   ),
-  .rf_we_i      (rf_we_d_i      ),
-  .latch_en_i   (latch_en_d_i   ),
-  .latch_clear_i(latch_clear_d_i),
-  .has_imm_o    (has_imm_d_o    ),
-  .alu_op_o     (alu_op_d_o     ),
-  .alu_alt_o    (alu_alt_d_o    ),
-  .rf_we_o      (rf_we_d_o      ),
-  .mem_we_o     (mem_we_d_o     ),
-  .mem2rf_o     (mem2rf_d_o     ),
-  .branch_o     (branch_d_o     ),
-  .check_eq_o   (check_eq_d_o   ),
-  .imm32_o      (imm32_d_o      ),
-  .rf_data0_o   (rf_data0_d_o   ),
-  .rf_data1_o   (rf_data1_d_o   ),
-  .rf_waddr_o   (rf_waddr_d_o   ),
-  .pc_plus1_o   (pc_plus1_d_o   ),
-  .rf_src0_o    (rf_src0_d_o    ),
-  .rf_src1_o    (rf_src1_d_o    ),
-  .rf_src0_hu_o (rf_src0_hu_d_o ),
-  .rf_src1_hu_o (rf_src1_hu_d_o ),
-  .has_imm_hu_o (has_imm_hu_d_o )
-);
-
-wire                has_imm_e_i  = has_imm_d_o;
-wire  [ALU_OP_W-1:0]alu_op_e_i   = alu_op_d_o;
-wire                alu_alt_e_i  = alu_alt_d_o;
-wire                rf_we_e_i    = rf_we_d_o;
-wire                mem_we_e_i   = mem_we_d_o;
-wire                mem2rf_e_i   = mem2rf_d_o;
-wire                branch_e_i   = branch_d_o;
-wire                check_eq_e_i = check_eq_d_o;
-wire     [IMM_W-1:0]imm32_e_i    = imm32_d_o;
-wire    [DATA_W-1:0]rf_data0_e_i = rf_data0_d_o;
-wire    [DATA_W-1:0]rf_data1_e_i = rf_data1_d_o;
-wire    [ADDR_W-1:0]rf_waddr_e_i = rf_waddr_d_o;
-wire      [PC_W-1:0]pc_plus1_e_i = pc_plus1_d_o;
-wire    [ADDR_W-1:0]rf_src0_e_i  = rf_src0_d_o;
-wire    [ADDR_W-1:0]rf_src1_e_i  = rf_src1_d_o;
-
-wire [DATA_W-1:0]rf_data_m_fw_e_i;
-wire [DATA_W-1:0]rf_data_w_fw_e_i;
-wire [ALU_SRC_SEL_W-1:0]alu_src0_sel_e_i = hu_alu_src0_sel_o;
-wire [ALU_SRC_SEL_W-1:0]alu_src1_sel_e_i = hu_alu_src1_sel_o;
-wire latch_en_e_i    = 1'b1;
-wire latch_clear_e_i = 1'b0;
-
-wire             rf_we_e_o;
-wire             mem_we_e_o;
-wire             mem2rf_e_o;
-wire             branch_e_o;
-wire             check_eq_e_o;
-wire [DATA_W-1:0]mem_wdata_e_o;
-wire [ADDR_W-1:0]rf_waddr_e_o;
-wire [DATA_W-1:0]alu_result_e_o;
-wire   [PC_W-1:0]pc_branch_e_o;
-
-wire [ADDR_W-1:0]rf_src0_e_o;
-wire [ADDR_W-1:0]rf_src1_e_o;
-
-assign hu_rf_src0_i = rf_src0_e_o;
-assign hu_rf_src1_i = rf_src1_e_o;
-
-wire [ADDR_W-1:0]rf_dst_e_o;
-wire             mem2rf_hu_e_o;
-
-assign hu_rf_dst_e_i = rf_dst_e_o;
-assign hu_mem2rf_e_i = mem2rf_hu_e_o;
-
-execute_stage execute(
-  .clk           (clk             ),
-  .reset         (reset           ),
-  .has_imm_i     (has_imm_e_i     ),
-  .alu_op_i      (alu_op_e_i      ),
-  .alu_alt_i     (alu_alt_e_i     ),
-  .rf_we_i       (rf_we_e_i       ),
-  .mem_we_i      (mem_we_e_i      ),
-  .mem2rf_i      (mem2rf_e_i      ),
-  .branch_i      (branch_e_i      ),
-  .check_eq_i    (check_eq_e_i    ),
-  .imm32_i       (imm32_e_i       ),
-  .rf_data0_i    (rf_data0_e_i    ),
-  .rf_data1_i    (rf_data1_e_i    ),
-  .rf_waddr_i    (rf_waddr_e_i    ),
-  .pc_plus1_i    (pc_plus1_e_i    ),
-  .rf_src0_i     (rf_src0_e_i     ),
-  .rf_src1_i     (rf_src1_e_i     ),
-  .rf_data_m_i   (rf_data_m_fw_e_i),
-  .rf_data_w_i   (rf_data_w_fw_e_i),
-  .alu_src0_sel_i(alu_src0_sel_e_i),
-  .alu_src1_sel_i(alu_src1_sel_e_i),
-  .latch_en      (latch_en_e_i    ),
-  .latch_clear   (latch_clear_e_i ),
-  .rf_we_o       (rf_we_e_o       ),
-  .mem_we_o      (mem_we_e_o      ),
-  .mem2rf_o      (mem2rf_e_o      ),
-  .branch_o      (branch_e_o      ),
-  .check_eq_o    (check_eq_e_o    ),
-  .mem_wdata_o   (mem_wdata_e_o   ),
-  .rf_waddr_o    (rf_waddr_e_o    ),
-  .alu_result_o  (alu_result_e_o  ),
-  .pc_branch_o   (pc_branch_e_o   ),
-  .rf_src0_o     (rf_src0_e_o     ),
-  .rf_src1_o     (rf_src1_e_o     ),
-  .rf_dst_o      (rf_dst_e_o      ),
-  .mem2rf_hu_o   (mem2rf_hu_e_o   )
-);
-
-  wire             rf_we_m_i      = rf_we_e_o;
-  wire             mem_we_m_i     = mem_we_e_o;
-  wire             mem2rf_m_i     = mem2rf_e_o;
-  wire             branch_m_i     = branch_e_o;
-  wire             check_eq_m_i   = check_eq_e_o;
-  wire [DATA_W-1:0]mem_wdata_m_i  = mem_wdata_e_o;
-  wire [ADDR_W-1:0]rf_waddr_m_i   = rf_waddr_e_o;
-  wire [DATA_W-1:0]alu_result_m_i = alu_result_e_o;
-  wire   [PC_W-1:0]pc_branch_m_i  = pc_branch_e_o;
-
-  wire latch_en_m_i    = 1'b1;
-  wire latch_clear_m_i = 1'b0;
-
-  wire             pc_src_m_o;
-  wire             rf_we_m_o;
-  wire [ADDR_W-1:0]rf_waddr_m_o;
-  wire             mem2rf_m_o;
-  wire [DATA_W-1:0]mem_rdata_m_o;
-  wire [DATA_W-1:0]alu_result_m_o;
-  wire   [PC_W-1:0]pc_branch_m_o;
-
-  wire [DATA_W-1:0]rf_data_m_o;
-  wire [ADDR_W-1:0]rf_dst_m_o;
-  wire             rf_we_hu_m_o;
-
-  assign rf_data_m_fw_e_i = rf_data_m_o;
-  assign hu_rf_dst_m_i    = rf_dst_m_o;
-  assign hu_rf_we_m_i     = rf_we_hu_m_o;
-
-  memory_stage memory(
-    .clk         (clk            ),
-    .reset       (reset          ),
-    .rf_we_i     (rf_we_m_i      ),
-    .mem_we_i    (mem_we_m_i     ),
-    .mem2rf_i    (mem2rf_m_i     ),
-    .branch_i    (branch_m_i     ),
-    .check_eq_i  (check_eq_m_i   ),
-    .mem_wdata_i (mem_wdata_m_i  ),
-    .rf_waddr_i  (rf_waddr_m_i   ),
-    .alu_result_i(alu_result_m_i ),
-    .pc_branch_i (pc_branch_m_i  ),
-    .latch_en    (latch_en_m_i   ),
-    .latch_clear (latch_clear_m_i),
-    .rf_we_o     (rf_we_m_o      ),
-    .rf_waddr_o  (rf_waddr_m_o   ),
-    .mem2rf_o    (mem2rf_m_o     ),
-    .pc_src_o    (pc_src_m_o     ),
-    .mem_rdata_o (mem_rdata_m_o  ),
-    .alu_result_o(alu_result_m_o ),
-    .pc_branch_o (pc_branch_m_o  ),
-    .rf_data_o   (rf_data_m_o    ),
-    .rf_dst_o    (rf_dst_m_o     ),
-    .rf_we_hu_o  (rf_we_hu_m_o   )
+  hazard_unit hu(
+    .rf_src0_i      (e_rf_src0_hu     ),
+    .rf_src1_i      (e_rf_src1_hu     ),
+    .rf_dst_m_i     (m_rf_dst_hu      ),
+    .rf_dst_w_i     (w_rf_dst_hu      ),
+    .rf_we_m_i      (m_rf_we_hu       ),
+    .rf_we_w_i      (w_rf_we_hu       ),
+    .alu_src0_sel_o (hu_alu_src0_sel_e),
+    .alu_src1_sel_o (hu_alu_src1_sel_e),
+    .rf_src0_d_i    (d_rf_src0_hu     ),
+    .rf_src1_d_i    (d_rf_src1_hu     ),
+    .has_imm_d_i    (d_has_imm_hu     ),
+    .rf_dst_e_i     (e_rf_dst_hu      ),
+    .mem2rf_e_i     (e_mem2rf_hu      ),
+    .latch_en_f_o   (hu_latch_en_f    ),
+    .latch_clear_d_o(hu_latch_clear_d ),
+    .pc_src_i       (m_pc_src_hu      ),
+    .latch_clear_f_o(hu_latch_clear_f ),
+    .latch_clear_e_o(hu_latch_clear_e )
   );
 
-  assign pc_src_f_i    = pc_src_m_o;
-  assign pc_branch_f_i = pc_branch_m_o;
+  wire              m_pc_src_f;
+  wire    [PC_W-1:0]m_pc_branch_f;
+  wire [INSTR_W-1:0]f_instr_d;
+  wire    [PC_W-1:0]f_pc_plus1_d;
 
-  wire             rf_we_w_i      = rf_we_m_o;
-  wire [ADDR_W-1:0]rf_waddr_w_i   = rf_waddr_m_o;
-  wire             mem2rf_w_i     = mem2rf_m_o;
-  wire [DATA_W-1:0]mem_rdata_w_i  = mem_rdata_m_o;
-  wire [DATA_W-1:0]alu_result_w_i = alu_result_m_o;
+  fetch_stage fetch(
+    .clk          (clk             ),
+    .reset        (reset           ),
+    .pc_src_i     (m_pc_src_f      ),
+    .pc_branch_i  (m_pc_branch_f   ),
+    .latch_en_i   (hu_latch_en_f   ),
+    .latch_clear_i(hu_latch_clear_f),
+    .instr_o      (f_instr_d       ),
+    .pc_plus1_o   (f_pc_plus1_d    )
+  );
 
+  wire [ADDR_W-1:0]w_rf_waddr_d;
+  wire [DATA_W-1:0]w_rf_wdata_d;
+  wire             w_rf_we_d;
 
-  wire [ADDR_W-1:0]rf_waddr_w_o;
-  wire [DATA_W-1:0]rf_wdata_w_o;
-  wire             rf_we_w_o;
+  wire               d_has_imm_e;
+  wire [ALU_OP_W-1:0]d_alu_op_e;
+  wire               d_alu_alt_e;
+  wire               d_rf_we_e;
+  wire               d_mem_we_e;
+  wire               d_mem2rf_e;
+  wire               d_branch_e;
+  wire               d_check_eq_e;
+  wire               d_jump_e;
+  wire    [IMM_W-1:0]d_imm32_e;
+  wire   [DATA_W-1:0]d_rf_data0_e;
+  wire   [DATA_W-1:0]d_rf_data1_e;
+  wire   [ADDR_W-1:0]d_rf_waddr_e;
+  wire     [PC_W-1:0]d_pc_plus1_e;
+  wire   [ADDR_W-1:0]d_rf_src0_e;
+  wire   [ADDR_W-1:0]d_rf_src1_e;
 
-  wire [DATA_W-1:0]rf_data_w_o;
-  wire [ADDR_W-1:0]rf_dst_w_o;
-  wire             rf_we_hu_w_o;
+  wire latch_en_d    = 1'b1;
 
-  assign rf_data_w_fw_e_i = rf_data_w_o;
-  assign hu_rf_dst_w_i    = rf_dst_w_o;
-  assign hu_rf_we_w_i     = rf_we_hu_w_o;
+  decode_stage decode(
+    .clk          (clk             ),
+    .reset        (reset           ),
+    .instr_i      (f_instr_d       ),
+    .pc_plus1_i   (f_pc_plus1_d    ),
+    .rf_waddr_i   (w_rf_waddr_d    ),
+    .rf_wdata_i   (w_rf_wdata_d    ),
+    .rf_we_i      (w_rf_we_d       ),
+    .latch_en_i   (latch_en_d      ),
+    .latch_clear_i(hu_latch_clear_d),
+    .has_imm_o    (d_has_imm_e     ),
+    .alu_op_o     (d_alu_op_e      ),
+    .alu_alt_o    (d_alu_alt_e     ),
+    .rf_we_o      (d_rf_we_e       ),
+    .mem_we_o     (d_mem_we_e      ),
+    .mem2rf_o     (d_mem2rf_e      ),
+    .branch_o     (d_branch_e      ),
+    .check_eq_o   (d_check_eq_e    ),
+    .jump_o       (d_jump_e        ),
+    .imm32_o      (d_imm32_e       ),
+    .rf_data0_o   (d_rf_data0_e    ),
+    .rf_data1_o   (d_rf_data1_e    ),
+    .rf_waddr_o   (d_rf_waddr_e    ),
+    .pc_plus1_o   (d_pc_plus1_e    ),
+    .rf_src0_o    (d_rf_src0_e     ),
+    .rf_src1_o    (d_rf_src1_e     ),
+    .rf_src0_hu_o (d_rf_src0_hu    ),
+    .rf_src1_hu_o (d_rf_src1_hu    ),
+    .has_imm_hu_o (d_has_imm_hu    )
+  );
+
+  wire [DATA_W-1:0]m_rf_data_e;
+  wire [DATA_W-1:0]w_rf_data_e;
+
+  wire latch_en_e    = 1'b1;
+
+  wire             e_rf_we_m;
+  wire             e_mem_we_m;
+  wire             e_mem2rf_m;
+  wire             e_branch_m;
+  wire             e_check_eq_m;
+  wire             e_jump_m;
+  wire [DATA_W-1:0]e_mem_wdata_m;
+  wire [ADDR_W-1:0]e_rf_waddr_m;
+  wire [DATA_W-1:0]e_alu_result_m;
+  wire   [PC_W-1:0]e_pc_branch_m;
+
+  execute_stage execute(
+    .clk           (clk              ),
+    .reset         (reset            ),
+    .has_imm_i     (d_has_imm_e      ),
+    .alu_op_i      (d_alu_op_e       ),
+    .alu_alt_i     (d_alu_alt_e      ),
+    .rf_we_i       (d_rf_we_e        ),
+    .mem_we_i      (d_mem_we_e       ),
+    .mem2rf_i      (d_mem2rf_e       ),
+    .branch_i      (d_branch_e       ),
+    .check_eq_i    (d_check_eq_e     ),
+    .jump_i        (d_jump_e         ),
+    .imm32_i       (d_imm32_e        ),
+    .rf_data0_i    (d_rf_data0_e     ),
+    .rf_data1_i    (d_rf_data1_e     ),
+    .rf_waddr_i    (d_rf_waddr_e     ),
+    .pc_plus1_i    (d_pc_plus1_e     ),
+    .rf_src0_i     (d_rf_src0_e      ),
+    .rf_src1_i     (d_rf_src1_e      ),
+    .rf_data_m_i   (m_rf_data_e      ),
+    .rf_data_w_i   (w_rf_data_e      ),
+    .alu_src0_sel_i(hu_alu_src0_sel_e),
+    .alu_src1_sel_i(hu_alu_src1_sel_e),
+    .latch_en_i    (latch_en_e       ),
+    .latch_clear_i (hu_latch_clear_e ),
+    .rf_we_o       (e_rf_we_m        ),
+    .mem_we_o      (e_mem_we_m       ),
+    .mem2rf_o      (e_mem2rf_m       ),
+    .branch_o      (e_branch_m       ),
+    .check_eq_o    (e_check_eq_m     ),
+    .jump_o        (e_jump_m         ),
+    .mem_wdata_o   (e_mem_wdata_m    ),
+    .rf_waddr_o    (e_rf_waddr_m     ),
+    .alu_result_o  (e_alu_result_m   ),
+    .pc_branch_o   (e_pc_branch_m    ),
+    .rf_src0_o     (e_rf_src0_hu     ),
+    .rf_src1_o     (e_rf_src1_hu     ),
+    .rf_dst_o      (e_rf_dst_hu      ),
+    .mem2rf_hu_o   (e_mem2rf_hu      )
+  );
+
+  wire latch_en_m    = 1'b1;
+  wire latch_clear_m = 1'b0;
+
+  wire             m_rf_we_w;
+  wire [ADDR_W-1:0]m_rf_waddr_w;
+  wire             m_mem2rf_w;
+  wire [DATA_W-1:0]m_mem_rdata_w;
+  wire [DATA_W-1:0]m_alu_result_w;
+
+  memory_stage memory(
+    .clk          (clk           ),
+    .reset        (reset         ),
+    .rf_we_i      (e_rf_we_m     ),
+    .mem_we_i     (e_mem_we_m    ),
+    .mem2rf_i     (e_mem2rf_m    ),
+    .branch_i     (e_branch_m    ),
+    .check_eq_i   (e_check_eq_m  ),
+    .jump_i       (e_jump_m      ),
+    .mem_wdata_i  (e_mem_wdata_m ),
+    .rf_waddr_i   (e_rf_waddr_m  ),
+    .alu_result_i (e_alu_result_m),
+    .pc_branch_i  (e_pc_branch_m ),
+    .latch_en_i   (latch_en_m    ),
+    .latch_clear_i(latch_clear_m ),
+    .rf_we_o      (m_rf_we_w     ),
+    .rf_waddr_o   (m_rf_waddr_w  ),
+    .mem2rf_o     (m_mem2rf_w    ),
+    .pc_src_o     (m_pc_src_f    ),
+    .mem_rdata_o  (m_mem_rdata_w ),
+    .alu_result_o (m_alu_result_w),
+    .pc_branch_o  (m_pc_branch_f ),
+    .rf_data_o    (m_rf_data_e   ),
+    .rf_dst_o     (m_rf_dst_hu   ),
+    .rf_we_hu_o   (m_rf_we_hu    ),
+    .pc_src_hu_o  (m_pc_src_hu   )
+  );
 
   writeback_stage writeback(
     .clk         (clk           ),
-    .rf_we_i     (rf_we_w_i     ),
-    .rf_waddr_i  (rf_waddr_w_i  ),
-    .mem2rf_i    (mem2rf_w_i    ),
-    .mem_rdata_i (mem_rdata_w_i ),
-    .alu_result_i(alu_result_w_i),
-    .rf_we_o     (rf_we_w_o     ),
-    .rf_waddr_o  (rf_waddr_w_o  ),
-    .alu_result_o(rf_wdata_w_o  ),
-    .rf_data_o   (rf_data_w_o   ),
-    .rf_dst_o    (rf_dst_w_o    ),
-    .rf_we_hu_o  (rf_we_hu_w_o  )
+    .rf_we_i     (m_rf_we_w     ),
+    .rf_waddr_i  (m_rf_waddr_w  ),
+    .mem2rf_i    (m_mem2rf_w    ),
+    .mem_rdata_i (m_mem_rdata_w ),
+    .alu_result_i(m_alu_result_w),
+    .rf_we_o     (w_rf_we_d     ),
+    .rf_waddr_o  (w_rf_waddr_d  ),
+    .alu_result_o(w_rf_wdata_d  ),
+    .rf_data_o   (w_rf_data_e   ),
+    .rf_dst_o    (w_rf_dst_hu   ),
+    .rf_we_hu_o  (w_rf_we_hu    )
   );
-
-  always_comb begin
-    rf_waddr_d_i = rf_waddr_w_o;
-    rf_wdata_d_i = rf_wdata_w_o;
-    rf_we_d_i    = rf_we_w_o;
-  end
 
 endmodule
 

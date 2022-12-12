@@ -30,6 +30,7 @@ module decode_stage #(
   output               mem2rf_o,
   output               branch_o,
   output               check_eq_o,
+  output               jump_o,
   output    [IMM_W-1:0]imm32_o,
   output   [DATA_W-1:0]rf_data0_o,
   output   [DATA_W-1:0]rf_data1_o,
@@ -46,6 +47,7 @@ module decode_stage #(
 
   // localparam REG_ADDR_W = 5;
   localparam IMM12_W    = 12;
+  localparam IMM20_W    = 20;
   localparam F3_W       = 3;
   localparam F7_W       = 7;
   localparam OP_W       = 7;
@@ -60,6 +62,7 @@ module decode_stage #(
   logic [IMM12_W-1:0]imm12_branch;
   logic [IMM12_W-1:0]imm12_default;
   logic [IMM12_W-1:0]imm12;
+  logic [IMM20_W-1:0]imm20;
 
   wire [ADDR_W-1:0]rf_waddr = instr_i[11:7];
 
@@ -71,6 +74,8 @@ module decode_stage #(
   wire               mem2rf;
   wire               branch;
   wire               check_eq;
+  wire               jump;
+  wire               is_imm20;
 
   always_comb begin
     imm12_sw      = {instr_i[31:25], instr_i[11:7]};
@@ -78,6 +83,7 @@ module decode_stage #(
                      instr_i[30:25], instr_i[11:9]};
     imm12_default = instr_i[31:20];
     imm12 = mem_we ? imm12_sw : branch ? imm12_branch : imm12_default;
+    imm20 = {instr_i[31], instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:22]};
   end
 
   control_unit #(
@@ -96,7 +102,9 @@ module decode_stage #(
     .mem_we  (mem_we  ),
     .mem2rf  (mem2rf  ),
     .branch  (branch  ),
-    .check_eq(check_eq)
+    .check_eq(check_eq),
+    .jump    (jump    ),
+    .is_imm20(is_imm20)
   );
 
   wire [DATA_W-1:0]rf_data0;
@@ -117,8 +125,12 @@ module decode_stage #(
   );
 
   wire [IMM_W-1:0]imm32;
+  wire [IMM_W-1:0]imm32_12;
+  wire [IMM_W-1:0]imm32_20;
 
-  sign_ext sign_ext(.imm12(imm12), .imm32(imm32));
+  sign_ext #(.BASE_W(IMM12_W), .RES_W(IMM_W)) imm12_sext(.base_i(imm12), .result_o(imm32_12));
+  sign_ext #(.BASE_W(IMM20_W), .RES_W(IMM_W)) imm20_sext(.base_i(imm20), .result_o(imm32_20));
+  assign imm32 = is_imm20 ? imm32_20 : imm32_12;
 
   latch                      has_imm_l (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(has_imm   ), .data_o(has_imm_o ));
   latch #(.DATA_W(ALU_OP_W)) alu_op_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(alu_op    ), .data_o(alu_op_o  ));
@@ -128,6 +140,7 @@ module decode_stage #(
   latch                      mem2rf_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(mem2rf    ), .data_o(mem2rf_o  ));
   latch                      branch_l  (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(branch    ), .data_o(branch_o  ));
   latch                      check_eq_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(check_eq  ), .data_o(check_eq_o));
+  latch                      jump_l    (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(jump      ), .data_o(jump_o    ));
   latch #(.DATA_W(IMM_W))    imm32_l   (.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(imm32     ), .data_o(imm32_o   ));
   latch #(.DATA_W(DATA_W))   rf_data0_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_data0  ), .data_o(rf_data0_o));
   latch #(.DATA_W(DATA_W))   rf_data1_l(.clk(clk), .reset(reset), .en(latch_en_i), .clear(latch_clear_i), .data_i(rf_data1  ), .data_o(rf_data1_o));

@@ -21,7 +21,10 @@ module control_unit #(
   output logic               mem2rf,
 
   output logic               branch,
-  output logic               check_eq
+  output logic               check_eq,
+
+  output logic               jump,
+  output logic               is_imm20
 );
 
   always_comb begin
@@ -33,6 +36,8 @@ module control_unit #(
     mem2rf   = 1'b0;
     branch   = 1'b0;
     check_eq = 1'b0;
+    jump     = 1'b0;
+    is_imm20 = 1'b0;
 
     casez (opcode)
       7'b0010011: begin /* I-type */
@@ -60,6 +65,16 @@ module control_unit #(
         alu_op   = {1'b0, funct3[2:1]};
         branch   = 1'b1;
         check_eq = funct3[0] ^ ~funct3[2];
+      end
+      7'b1101111: begin /* JAL */
+        jump     = 1'b1;
+        is_imm20 = 1'b1;
+        rf_we    = 1'b1;
+      end
+      7'b1100111: begin /* JALR */
+        has_imm = 1'b1;
+        jump    = 1'b1;
+        rf_we   = 1'b1;
       end
       default: ;
     endcase

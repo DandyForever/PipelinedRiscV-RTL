@@ -27,7 +27,14 @@ module hazard_unit #(
 // to FE to support stall
   output latch_en_f_o,
 // to DE to support stall
-  output latch_clear_d_o
+  output latch_clear_d_o,
+
+// from ME to support branch prediction
+  input pc_src_i,
+// to FE to support branch prediction
+  output latch_clear_f_o,
+// to EXE to support branch prediction
+  output latch_clear_e_o
 );
 
   wire src0_bypass_m = rf_src0_i && (rf_src0_i == rf_dst_m_i) && rf_we_m_i;
@@ -45,7 +52,9 @@ module hazard_unit #(
   wire is_stall     = (src0_stall_e || src1_stall_e) && mem2rf_e_i;
 
   assign latch_en_f_o    = ~is_stall;
-  assign latch_clear_d_o =  is_stall;
+  assign latch_clear_d_o =  is_stall || pc_src_i;
+  assign latch_clear_f_o = pc_src_i;
+  assign latch_clear_e_o = pc_src_i;
 
 endmodule
 

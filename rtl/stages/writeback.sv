@@ -24,8 +24,8 @@ module writeback_stage #(
 );
 
   always_comb begin
-    rf_we_o = rf_we_i;
-    rf_waddr_o = rf_waddr_i;
+    rf_we_o      = rf_we_i;
+    rf_waddr_o   = rf_waddr_i;
     alu_result_o = mem2rf_i ? mem_rdata_i : alu_result_i;
   end
 

@@ -30,7 +30,7 @@ module reg_file #(
   assign rdata0 = (raddr0 == 0) ? 0 : x[raddr0];
   assign rdata1 = (raddr1 == 0) ? 0 : x[raddr1];
 
-  always @(posedge clk) begin
+  always @(negedge clk) begin
     if (we) begin
       x[waddr] <= wdata;
     end
